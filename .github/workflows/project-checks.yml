@@ -1,0 +1,23 @@
+name: Project checks
+
+on:
+  push:
+    branches: [main, dev, feature/web-deploy]
+  pull_request:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shell scripts and site files
+        run: |
+          bash -n scripts/audit.sh scripts/deploy.sh
+          test -s site/index.html
+          test -s site/404.html
+          grep -q 'DevOps Course 2026' site/index.html
+          git diff --check
