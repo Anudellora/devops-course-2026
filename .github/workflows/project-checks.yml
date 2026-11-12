@@ -2,7 +2,7 @@ name: Project checks
 
 on:
   push:
-    branches: [main, dev, feature/web-deploy]
+    branches: [main, dev, feature/web-deploy, feature/docker]
   pull_request:
     branches: [main, dev]
 
@@ -20,4 +20,10 @@ jobs:
           test -s site/index.html
           test -s site/404.html
           grep -q 'DevOps Course 2026' site/index.html
+          python -m py_compile app/app.py
+          test -s app/Dockerfile
+          test -s app/docker-compose.yml
+          test -s app/.env.example
+          grep -qx 'app/.env' .gitignore
+          test -z "$(git ls-files app/.env)"
           git diff --check
