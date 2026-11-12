@@ -40,5 +40,18 @@ else
     web_permissions=fail
 fi
 check "Web files not world-writable and private key mode 600" "ok" "$web_permissions"
+echo "[5] Containerization"
+check "Docker service active" "ok" "$(systemctl is-active --quiet docker && echo ok || echo fail)"
+db_health="$(docker inspect -f '{{.State.Health.Status}}' app-db-1 2>/dev/null || echo missing)"
+check "Database container healthy" "healthy" "$db_health"
+listeners="$(ss -tlnH 2>/dev/null | awk '$4 ~ /:(5000|5432)$/ {print $4}')"
+if [[ "$listeners" == "127.0.0.1:5000" ]]; then
+    port_status=ok
+else
+    port_status="${listeners:-missing}"
+fi
+check "App bound only to 127.0.0.1:5000; DB port unpublished" "ok" "$port_status"
+env_mode="$(stat -c '%a' /home/devops/app/.env 2>/dev/null || echo missing)"
+check "App .env mode 600" "600" "$env_mode"
 echo "Passed: $PASS; failed: $FAIL"
 [[ $FAIL -eq 0 ]]
