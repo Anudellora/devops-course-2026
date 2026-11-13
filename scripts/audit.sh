@@ -53,5 +53,20 @@ fi
 check "App bound only to 127.0.0.1:5000; DB port unpublished" "ok" "$port_status"
 env_mode="$(stat -c '%a' /home/devops/app/.env 2>/dev/null || echo missing)"
 check "App .env mode 600" "600" "$env_mode"
+echo "[6] Control work 2"
+kr2_dir="/home/devops/kr2"
+redis_id="$(docker compose --project-directory "$kr2_dir" ps -q redis 2>/dev/null || true)"
+if [[ -n "$redis_id" ]]; then
+    kr2_redis_health="$(docker inspect -f '{{.State.Health.Status}}' "$redis_id" 2>/dev/null || echo missing)"
+else
+    kr2_redis_health=missing
+fi
+check "KR2 Redis container healthy" "healthy" "$kr2_redis_health"
+kr2_port="$(docker compose --project-directory "$kr2_dir" port app 8002 2>/dev/null || echo missing)"
+check "KR2 app published only on 127.0.0.1:8002" "127.0.0.1:8002" "$kr2_port"
+kr2_env_mode="$(stat -c '%a' "$kr2_dir/.env" 2>/dev/null || echo missing)"
+check "KR2 .env mode 600" "600" "$kr2_env_mode"
+check "KR2 certificate valid for at least 30 days" "ok" "$(openssl x509 -in /etc/ssl/certs/kr2.crt -checkend "$cert_min_seconds" -noout >/dev/null 2>&1 && echo ok || echo fail)"
+check "KR2 Nginx site enabled" "ok" "$(test -L /etc/nginx/sites-enabled/kr2 && echo ok || echo fail)"
 echo "Passed: $PASS; failed: $FAIL"
 [[ $FAIL -eq 0 ]]
